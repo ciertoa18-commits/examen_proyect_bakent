@@ -16,6 +16,5 @@ public class Equipo extends Auditable {
     @Column(name="unidades_disponibles", nullable=false) private Integer unidadesDisponibles;
     @Column(nullable=false) private Boolean estado = true;
     @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="categoria_id", nullable=false) private Categoria categoria;
-    @Enumerated(EnumType.STRING) @Column(nullable=false, length=10) private CondicionEquipo condicion;
 
 }

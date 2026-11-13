@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import java.time.LocalDateTime;
 import java.util.*;
 @RestControllerAdvice @Slf4j
@@ -32,6 +34,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> integridad(Exception e,HttpServletRequest r) { log.warn("Conflicto de integridad o concurrencia: {}",e.getClass().getSimpleName()); return error(HttpStatus.CONFLICT,"Conflicto: valor duplicado, recurso relacionado o modificación concurrente",r,Map.of()); }
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class, ConstraintViolationException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponseDTO> formato(Exception e,HttpServletRequest r) { return error(HttpStatus.BAD_REQUEST,"Petición inválida: revise JSON, parámetros, fechas y valores de enumeraciones",r,Map.of("peticion","Formato o valor inválido")); }
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> rutaInexistente(NoResourceFoundException e,HttpServletRequest r) { return error(HttpStatus.NOT_FOUND,"Ruta no encontrada",r,Map.of()); }
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponseDTO> metodo(HttpRequestMethodNotSupportedException e,HttpServletRequest r) { return error(HttpStatus.METHOD_NOT_ALLOWED,"Método HTTP no permitido para esta ruta",r,Map.of()); }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> inesperado(Exception e,HttpServletRequest r) { log.error("Error inesperado en {}",r.getRequestURI(),e); return error(HttpStatus.INTERNAL_SERVER_ERROR,"Ocurrió un error interno",r,Map.of()); }
 }

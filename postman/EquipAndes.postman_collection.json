@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "EquipAndes - Anexo B y SC-A a SC-D",
+    "name": "EquipAndes - Anexo B",
     "description": "Ejecutar carpeta Anexo B sobre esquema recién sembrado. El caso 503 se ejecuta aparte, con Oracle detenido. Los IDs se resuelven por código. Las fechas se calculan con America/Lima.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -178,7 +178,7 @@
             "url": "{{baseUrl}}/equipos",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"X\",\n  \"nombre\": \"a\",\n  \"tarifaDiaria\": 0,\n  \"unidadesDisponibles\": -1,\n  \"estado\": true,\n  \"categoriaId\": \"{{categoriaSonido}}\",\n  \"condicion\": \"BUENO\"\n}",
+              "raw": "{\n  \"codigo\": \"X\",\n  \"nombre\": \"a\",\n  \"tarifaDiaria\": 0,\n  \"unidadesDisponibles\": -1,\n  \"estado\": true,\n  \"categoriaId\": \"{{categoriaSonido}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -212,7 +212,7 @@
             "url": "{{baseUrl}}/equipos",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"EQP-099\",\n  \"nombre\": \"Equipo válido\",\n  \"tarifaDiaria\": 10,\n  \"unidadesDisponibles\": 1,\n  \"estado\": true,\n  \"categoriaId\": 999999,\n  \"condicion\": \"BUENO\"\n}",
+              "raw": "{\n  \"codigo\": \"EQP-099\",\n  \"nombre\": \"Equipo válido\",\n  \"tarifaDiaria\": 10,\n  \"unidadesDisponibles\": 1,\n  \"estado\": true,\n  \"categoriaId\": 999999\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -836,182 +836,6 @@
                 "exec": [
                   "pm.test('HTTP 403',()=>pm.response.to.have.status(403));",
                   "pm.test('Sin permiso CORS',()=>pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.eql(false));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Parte II - cambios adicionales (después del Anexo B)",
-      "item": [
-        {
-          "name": "SC-A - Alquileres vigentes del cliente",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/clientes/{{CLI-001}}/alquileres?estado=VIGENTE"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
-                  "pm.test('Un alquiler vigente',()=>pm.expect(pm.response.json().length).to.eql(1));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "SC-A - Cliente inexistente",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/clientes/999999/alquileres"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "SC-B - Crear alquiler con dos equipos",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/alquileres",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clienteId\": \"{{CLI-003}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 7,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-001}}\",\n      \"cantidad\": 1\n    },\n    {\n      \"equipoId\": \"{{EQP-003}}\",\n      \"cantidad\": 2\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('alquilerSC',pm.response.json().id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "SC-B - Retirar micrófono y recalcular",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{baseUrl}}/alquileres/{{alquilerSC}}/equipos/{{EQP-003}}"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
-                  "pm.test('Totales actualizados',()=>{const a=pm.response.json();pm.expect(a.subtotal).to.eql(560);pm.expect(a.descuento).to.eql(84);pm.expect(a.montoTotal).to.eql(476);});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "SC-B - No dejar vacío",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{baseUrl}}/alquileres/{{alquilerSC}}/equipos/{{EQP-001}}"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "SC-C - Ingresos por categoría",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/reportes/ingresos-por-categoria?periodo={{periodo}}"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "SC-C - Periodo sin datos",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/reportes/ingresos-por-categoria?periodo=2000-01"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
-                  "pm.test('Lista vacía',()=>pm.expect(pm.response.json()).to.eql([]));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "SC-D - Condición como filtro",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/equipos/buscar?condicion=NUEVO&nombre=pantalla"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
-                  "pm.test('Pantalla nueva',()=>pm.expect(pm.response.json()[0].codigo).to.eql('EQP-006'));"
                 ]
               }
             }

@@ -66,15 +66,4 @@ public class AlquilerServiceImpl implements AlquilerService {
         a.getDetalles().stream().sorted(Comparator.comparing(d->d.getEquipo().getId())).forEach(d->{ Equipo e=bloquearEquipo(d.getEquipo().getId()); e.setUnidadesDisponibles(Math.addExact(e.getUnidadesDisponibles(),d.getCantidad())); });
         a.setEstado(EstadoAlquiler.DEVUELTO); a.setFechaDevolucion(LocalDateTime.now(clock)); repository.flush(); log.info("Alquiler devuelto: {}",id); return DtoMapper.alquiler(a);
     }
-    public List<AlquilerResponseDTO> porCliente(Long id,EstadoAlquiler estado) {
-        if(!clientes.existsById(id)) throw new RecursoNoEncontradoException("Cliente no encontrado: "+id);
-        return repository.porCliente(id,estado).stream().map(DtoMapper::alquiler).toList();
-    }
-    @Transactional public AlquilerResponseDTO retirarEquipo(Long id,Long equipoId) {
-        Alquiler a=bloquear(id); exigirVigente(a);
-        DetalleAlquiler d=a.getDetalles().stream().filter(x->x.getEquipo().getId().equals(equipoId)).findFirst().orElseThrow(()->new RecursoNoEncontradoException("El equipo no pertenece al alquiler"));
-        if(a.getDetalles().size()==1) throw new ReglaNegocioException("SC-B: no se puede dejar el alquiler sin equipos");
-        Equipo e=bloquearEquipo(equipoId); e.setUnidadesDisponibles(Math.addExact(e.getUnidadesDisponibles(),d.getCantidad()));
-        a.retirarDetalle(d); recalcular(a); repository.flush(); log.info("Equipo {} retirado del alquiler {}",equipoId,id); return DtoMapper.alquiler(a);
-    }
 }

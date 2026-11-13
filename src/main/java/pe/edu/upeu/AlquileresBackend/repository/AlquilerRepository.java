@@ -11,6 +11,4 @@ public interface AlquilerRepository extends JpaRepository<Alquiler,Long> {
     boolean existsByClienteId(Long clienteId);
     @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select a from Alquiler a where a.id = :id")
     Optional<Alquiler> bloquear(@Param("id") Long id);
-    @Query("select a from Alquiler a where a.cliente.id = :id and (:estado is null or a.estado = :estado) order by a.fechaInicio desc, a.id desc")
-    List<Alquiler> porCliente(@Param("id") Long id,@Param("estado") EstadoAlquiler estado);
 }

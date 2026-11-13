@@ -6,4 +6,4 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.util.List;
 import pe.edu.upeu.AlquileresBackend.enums.*;
-public record EquipoResponseDTO(Long id, String codigo, String nombre, BigDecimal tarifaDiaria, Integer unidadesDisponibles, Boolean estado, Long categoriaId, String categoriaNombre, CondicionEquipo condicion) {}
+public record EquipoResponseDTO(Long id, String codigo, String nombre, BigDecimal tarifaDiaria, Integer unidadesDisponibles, Boolean estado, Long categoriaId, String categoriaNombre) {}

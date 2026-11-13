@@ -27,5 +27,4 @@ public class ReporteServiceImpl implements ReporteService {
         log.info("Reporte equipos alquilados: periodo={}, categoria={}",periodo,categoriaId);
         return repository.equiposAlquilados(m.atDay(1).atStartOfDay(),m.plusMonths(1).atDay(1).atStartOfDay(),categoriaId);
     }
-    public List<IngresoCategoriaDTO> ingresosPorCategoria(String periodo) { YearMonth m=mes(periodo); log.info("Reporte ingresos por categoría: {}",periodo); return repository.ingresosPorCategoria(m.atDay(1).atStartOfDay(),m.plusMonths(1).atDay(1).atStartOfDay()); }
 }

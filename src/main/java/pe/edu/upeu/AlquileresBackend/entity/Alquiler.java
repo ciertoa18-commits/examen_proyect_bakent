@@ -24,5 +24,4 @@ public class Alquiler extends Auditable {
     @OneToMany(mappedBy="alquiler", cascade=CascadeType.ALL, orphanRemoval=true)
     @OrderBy("id ASC") private List<DetalleAlquiler> detalles = new ArrayList<>();
     public void agregarDetalle(DetalleAlquiler detalle) { detalles.add(detalle); detalle.setAlquiler(this); }
-    public void retirarDetalle(DetalleAlquiler detalle) { detalles.remove(detalle); detalle.setAlquiler(null); }
 }

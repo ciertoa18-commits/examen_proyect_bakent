@@ -60,7 +60,7 @@ class AlquileresIntegrationTest {
     }
     @Test void validacionDevuelveLosCuatroCamposYReferencias404() throws Exception {
         String json="""
-            {"codigo":"X","nombre":"a","tarifaDiaria":0,"unidadesDisponibles":-1,"estado":true,"categoriaId":1,"condicion":"BUENO"}
+            {"codigo":"X","nombre":"a","tarifaDiaria":0,"unidadesDisponibles":-1,"estado":true,"categoriaId":1}
             """;
         mvc.perform(post("/api/v1/equipos").contentType("application/json").content(json)).andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.validationErrors.codigo").exists()).andExpect(jsonPath("$.validationErrors.nombre").exists()).andExpect(jsonPath("$.validationErrors.tarifaDiaria").exists()).andExpect(jsonPath("$.validationErrors.unidadesDisponibles").exists());
@@ -71,25 +71,19 @@ class AlquileresIntegrationTest {
         mvc.perform(put("/api/v1/categorias/2").contentType("application/json").content("{\"nombre\":\" SONIDO \",\"estado\":true}")).andExpect(status().isConflict());
         mvc.perform(delete("/api/v1/categorias/1")).andExpect(status().isConflict());
     }
-    @Test void busquedaOrdenCondicionYCors() throws Exception {
+    @Test void busquedaOrdenYCors() throws Exception {
         mvc.perform(get("/api/v1/equipos/buscar?categoriaId=2&disponible=true&orden=tarifa&dir=asc")).andExpect(status().isOk()).andExpect(jsonPath("$[0].codigo").value("EQP-005")).andExpect(jsonPath("$[1].codigo").value("EQP-006")).andExpect(jsonPath("$.length()").value(2));
-        mvc.perform(get("/api/v1/equipos/buscar?condicion=NUEVO&nombre=PANTALLA")).andExpect(status().isOk()).andExpect(jsonPath("$[0].codigo").value("EQP-006"));
+        mvc.perform(get("/api/v1/equipos/buscar?nombre=PANTALLA")).andExpect(status().isOk()).andExpect(jsonPath("$[0].codigo").value("EQP-006"));
         mvc.perform(get("/api/v1/equipos/buscar?orden=id")).andExpect(status().isBadRequest());
         mvc.perform(options("/api/v1/equipos").header("Origin","http://localhost:4200").header("Access-Control-Request-Method","POST").header("Access-Control-Request-Headers","Content-Type")).andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Origin","http://localhost:4200"));
         mvc.perform(options("/api/v1/equipos").header("Origin","http://localhost:3000").header("Access-Control-Request-Method","POST")).andExpect(status().isForbidden()).andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
     }
-    @Test void cambiosAyByCYReporteConDevoluciones() throws Exception {
-        mvc.perform(post("/api/v1/alquileres").contentType("application/json").content(alquiler(1,7,linea(1,1)+","+linea(3,2)))).andExpect(status().isCreated());
-        mvc.perform(get("/api/v1/clientes/1/alquileres?estado=VIGENTE")).andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(1));
-        mvc.perform(get("/api/v1/clientes/99/alquileres")).andExpect(status().isNotFound());
-        mvc.perform(delete("/api/v1/alquileres/1/equipos/3")).andExpect(status().isOk()).andExpect(jsonPath("$.totalUnidades").value(1)).andExpect(jsonPath("$.subtotal").value(560)).andExpect(jsonPath("$.descuento").value(84)).andExpect(jsonPath("$.montoTotal").value(476));
-        assertThat(unidades(3)).isEqualTo(20); assertThat(jdbc.queryForObject("select count(*) from detalle_alquileres",Integer.class)).isEqualTo(1);
-        mvc.perform(delete("/api/v1/alquileres/1/equipos/1")).andExpect(status().isConflict());
+    @Test void reporteIncluyeAlquileresVigentesYDevueltos() throws Exception {
+        mvc.perform(post("/api/v1/alquileres").contentType("application/json").content(alquiler(1,7,linea(1,1)))).andExpect(status().isCreated());
         mvc.perform(patch("/api/v1/alquileres/1/devolver")).andExpect(status().isOk());
         String periodo=YearMonth.now(ZoneId.of("America/Lima")).toString();
         mvc.perform(get("/api/v1/reportes/equipos-alquilados?periodo="+periodo)).andExpect(status().isOk()).andExpect(jsonPath("$[0].codigo").value("EQP-001")).andExpect(jsonPath("$[0].importeBruto").value(560));
-        mvc.perform(get("/api/v1/reportes/ingresos-por-categoria?periodo="+periodo)).andExpect(status().isOk()).andExpect(jsonPath("$[0].numeroAlquileres").value(1)).andExpect(jsonPath("$[0].importeBruto").value(560));
-        mvc.perform(get("/api/v1/reportes/ingresos-por-categoria?periodo=2000-01")).andExpect(status().isOk()).andExpect(content().json("[]"));
+        mvc.perform(get("/api/v1/reportes/equipos-alquilados?periodo=2000-01")).andExpect(status().isOk()).andExpect(content().json("[]"));
         mvc.perform(get("/api/v1/reportes/equipos-alquilados?periodo=2026-13")).andExpect(status().isBadRequest());
     }
     @Test void healthConsultaBDYSwaggerExponeContrato() throws Exception {
