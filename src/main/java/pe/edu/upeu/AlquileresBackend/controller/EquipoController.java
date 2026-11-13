@@ -34,6 +34,6 @@ public class EquipoController {
     @DeleteMapping("/{id}") @Operation(summary="Eliminar sin referencias asociadas")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) { service.delete(id); return ResponseEntity.noContent().build(); }
 
-    @GetMapping("/buscar") @Operation(summary="Buscar con filtros combinables y orden validado; incluye condición SC-D")
-    public ResponseEntity<List<EquipoResponseDTO>> buscar(@RequestParam(required=false) String nombre,@RequestParam(required=false) Long categoriaId,@RequestParam(required=false) java.math.BigDecimal tarifaMax,@RequestParam(required=false) Boolean disponible,@RequestParam(defaultValue="nombre") String orden,@RequestParam(defaultValue="asc") String dir,@RequestParam(required=false) pe.edu.upeu.AlquileresBackend.enums.CondicionEquipo condicion) { return ResponseEntity.ok(service.buscar(nombre,categoriaId,tarifaMax,disponible,orden,dir,condicion)); }
+    @GetMapping("/buscar") @Operation(summary="Buscar con filtros combinables y orden validado")
+    public ResponseEntity<List<EquipoResponseDTO>> buscar(@RequestParam(required=false) String nombre,@RequestParam(required=false) Long categoriaId,@RequestParam(required=false) java.math.BigDecimal tarifaMax,@RequestParam(required=false) Boolean disponible,@RequestParam(defaultValue="nombre") String orden,@RequestParam(defaultValue="asc") String dir) { return ResponseEntity.ok(service.buscar(nombre,categoriaId,tarifaMax,disponible,orden,dir)); }
 }

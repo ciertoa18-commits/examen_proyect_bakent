@@ -30,6 +30,4 @@ public class AlquilerController {
     public ResponseEntity<AlquilerResponseDTO> buscar(@PathVariable Long id) { return ResponseEntity.ok(service.read(id)); }
     @PatchMapping("/{id}/devolver") @Operation(summary="Devolver alquiler VIGENTE y reponer unidades una sola vez")
     public ResponseEntity<AlquilerResponseDTO> devolver(@PathVariable Long id) { return ResponseEntity.ok(service.devolver(id)); }
-    @DeleteMapping("/{id}/equipos/{equipoId}") @Operation(summary="SC-B: retirar equipo y recalcular totales sin dejar el alquiler vacío")
-    public ResponseEntity<AlquilerResponseDTO> retirar(@PathVariable Long id,@PathVariable Long equipoId) { return ResponseEntity.ok(service.retirarEquipo(id,equipoId)); }
 }

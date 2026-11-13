@@ -9,4 +9,4 @@ import pe.edu.upeu.AlquileresBackend.enums.*;
 public record EquipoRequestDTO(@NotBlank @Pattern(regexp="^EQP-\\d{3}$") String codigo, @NotBlank @Size(min=3,max=150) String nombre,
     @NotNull @DecimalMin(value="0",inclusive=false) @Digits(integer=8,fraction=2) BigDecimal tarifaDiaria,
     @NotNull @Min(0) Integer unidadesDisponibles, @NotNull Boolean estado,
-    @NotNull @Positive Long categoriaId, @NotNull CondicionEquipo condicion) {}
+    @NotNull @Positive Long categoriaId) {}

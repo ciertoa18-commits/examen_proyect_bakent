@@ -6,7 +6,7 @@ if [ ! -f "$WRAPPER_JAR" ]; then
   exit 1
 fi
 if [ -n "$JAVA_HOME" ]; then
-  exec "$JAVA_HOME/bin/java" -classpath "$WRAPPER_JAR" org.apache.maven.wrapper.MavenWrapperMain "$@"
+  exec "$JAVA_HOME/bin/java" -classpath "$WRAPPER_JAR" "-Dmaven.multiModuleProjectDirectory=$DIRNAME" org.apache.maven.wrapper.MavenWrapperMain "$@"
 else
-  exec java -classpath "$WRAPPER_JAR" org.apache.maven.wrapper.MavenWrapperMain "$@"
+  exec java -classpath "$WRAPPER_JAR" "-Dmaven.multiModuleProjectDirectory=$DIRNAME" org.apache.maven.wrapper.MavenWrapperMain "$@"
 fi

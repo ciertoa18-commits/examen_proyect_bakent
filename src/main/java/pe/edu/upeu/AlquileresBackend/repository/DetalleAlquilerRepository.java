@@ -16,11 +16,4 @@ public interface DetalleAlquilerRepository extends JpaRepository<DetalleAlquiler
         group by e.codigo,e.nombre order by sum(d.cantidad) desc,e.codigo asc
         """)
     List<EquipoAlquiladoDTO> equiposAlquilados(@Param("inicio") LocalDateTime inicio,@Param("fin") LocalDateTime fin,@Param("categoriaId") Long categoriaId);
-    @Query("""
-        select new pe.edu.upeu.AlquileresBackend.dto.reporte.IngresoCategoriaDTO(c.id,c.nombre,count(distinct a.id),sum(d.cantidad),sum(d.importe))
-        from DetalleAlquiler d join d.equipo e join e.categoria c join d.alquiler a
-        where a.fechaRegistro >= :inicio and a.fechaRegistro < :fin
-        group by c.id,c.nombre order by c.nombre asc
-        """)
-    List<IngresoCategoriaDTO> ingresosPorCategoria(@Param("inicio") LocalDateTime inicio,@Param("fin") LocalDateTime fin);
 }

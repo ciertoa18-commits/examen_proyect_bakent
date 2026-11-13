@@ -1,6 +1,6 @@
 # EquipAndes - AlquileresBackend
 
-API REST para alquiler de equipos de sonido, proyección e iluminación. Proyecto independiente del ejemplo ClinicaBackend, con la misma separación por capas. Implementa RF-01 a RF-07, RN-01 a RN-04 y las ampliaciones SC-A, SC-B, SC-C y SC-D.
+API REST para alquiler de equipos de sonido, proyección e iluminación. Organizada en capas (controlador, servicio, repositorio) siguiendo la arquitectura de PharmaBackend. Implementa RF-01 a RF-07 y las reglas de negocio RN-01 a RN-04.
 
 ## 1. Requisitos y apertura
 
@@ -63,8 +63,7 @@ H2 solo tiene alcance test en Maven. dev y prod siempre usan Oracle. Estas prueb
 5. CP06 espera 2190.00; CP10 espera subtotal 1680.00, descuento 252.00 y total 1428.00. CP14 comprueba el orden y los importes exactos.
 6. CP15 devuelve el alquiler principal y rechaza la segunda devolución con 409.
 7. CP16 permite el preflight desde 4200 y rechaza 3000. Usar Postman Desktop o su agente para los encabezados Origin.
-8. Después se puede ejecutar la carpeta Parte II, que también modifica stock y reportes.
-9. La carpeta Manual - indisponibilidad Oracle se ejecuta aparte: primero detener Oracle manteniendo la API abierta, comprobar 503, volver a iniciar Oracle y comprobar 200. No incluirla en una ejecución normal de toda la colección.
+8. La carpeta Manual - indisponibilidad Oracle se ejecuta aparte: primero detener Oracle manteniendo la API abierta, comprobar 503, volver a iniciar Oracle y comprobar 200. No incluirla en una ejecución normal de toda la colección.
 
 ## 6. Endpoints
 
@@ -74,18 +73,15 @@ H2 solo tiene alcance test en Maven. dev y prod siempre usan Oracle. Estas prueb
 | /api/v1/categorias | POST, GET; /{id}: GET, PUT, DELETE |
 | /api/v1/categorias/{id}/equipos | GET |
 | /api/v1/equipos | POST, GET; /{id}: GET, PUT, DELETE |
-| /api/v1/equipos/buscar | GET: nombre, categoriaId, tarifaMax, disponible, orden, dir, condicion |
+| /api/v1/equipos/buscar | GET: nombre, categoriaId, tarifaMax, disponible, orden, dir |
 | /api/v1/clientes | POST, GET; /{id}: GET, PUT, DELETE |
-| /api/v1/clientes/{id}/alquileres | GET, estado opcional (SC-A) |
 | /api/v1/alquileres | POST, GET; /{id}: GET |
 | /api/v1/alquileres/{id}/devolver | PATCH |
-| /api/v1/alquileres/{id}/equipos/{equipoId} | DELETE, devuelve alquiler recalculado (SC-B) |
 | /api/v1/reportes/equipos-alquilados | GET, periodo obligatorio AAAA-MM, categoriaId opcional |
-| /api/v1/reportes/ingresos-por-categoria | GET, periodo obligatorio AAAA-MM (SC-C) |
 
-Orden: nombre, tarifa o unidades; dir: asc o desc. disponible=true significa stock > 0 y false significa stock = 0. Los equipos inactivos pueden aparecer en consultas de catálogo: la regla que impide alquilarlos se aplica al registrar el alquiler. condicion admite NUEVO, BUENO o REGULAR y es obligatoria en POST/PUT de equipos (SC-D).
+Orden: nombre, tarifa o unidades; dir: asc o desc. disponible=true significa stock > 0 y false significa stock = 0. Los equipos inactivos pueden aparecer en consultas de catálogo: la regla que impide alquilarlos se aplica al registrar el alquiler.
 
-POST responde 201 y Location; GET/PUT/PATCH responden 200; DELETE de catálogo responde 204; DELETE SC-B responde 200 con el alquiler recalculado. No se elimina una categoría con equipos, un equipo con detalles históricos ni un cliente con alquileres. No existe edición o eliminación general del alquiler porque el contrato pide registro y devolución.
+POST responde 201 y Location; GET/PUT/PATCH responden 200; DELETE de catálogo responde 204. No se elimina una categoría con equipos, un equipo con detalles históricos ni un cliente con alquileres. No existe edición o eliminación general del alquiler porque el contrato pide registro y devolución.
 
 Errores uniformes: timestamp, status, error, message, path y validationErrors. Bean Validation devuelve 400 con campos; recurso o referencia ausente devuelve 404; reglas y asociaciones devuelven 409; fallos inesperados devuelven 500 sin detalles internos. health tiene su propio DTO tanto en 200 como en 503.
 
@@ -98,7 +94,7 @@ src/main/java/pe/edu/upeu/AlquileresBackend/
   dto/                    Record de entrada y salida por recurso
     reporte/              Proyecciones JPQL
   entity/                 Cinco entidades y Auditable
-  enums/                  EstadoAlquiler, TipoCliente, CondicionEquipo
+  enums/                  EstadoAlquiler, TipoCliente
   exception/              Excepciones y GlobalExceptionHandler
     dto/                  ErrorResponseDTO
   repository/             JpaRepository, consultas y bloqueos
@@ -109,7 +105,6 @@ src/main/java/pe/edu/upeu/AlquileresBackend/
 src/main/resources/       application.yaml, application-dev.yaml, application-prod.yaml
 src/test/                 Pruebas aisladas y semilla H2
 postman/                  Colección y entorno
-docs/                    Guía de defensa, trazabilidad y evidencias pendientes
 ~~~
 
 ## 8. Decisiones de arquitectura
@@ -117,7 +112,7 @@ docs/                    Guía de defensa, trazabilidad y evidencias pendientes
 - Los controladores solo validan y delegan. Los servicios reciben DTO y devuelven DTO; no se exponen entidades JPA.
 - Las asociaciones ManyToOne son LAZY; open-in-view=false obliga a transformar los DTO dentro de las transacciones de servicio.
 - RN-01 a RN-04 están en AlquilerServiceImpl. Un RuntimeException revierte la transacción, incluso si una línea previa ya descontó unidades.
-- Alquiler.agregarDetalle establece ambos lados; cascade ALL guarda los detalles y orphanRemoval elimina los retirados por SC-B.
+- Alquiler.agregarDetalle establece ambos lados; cascade ALL guarda los detalles y orphanRemoval elimina un detalle que se quite de la lista.
 - El detalle copia la tarifa; todos los cálculos usan BigDecimal, escala 2 y HALF_UP. Los cambios futuros de tarifa no alteran los importes ya registrados.
 - El cliente se bloquea con PESSIMISTIC_WRITE antes del COUNT de alquileres vigentes. Los equipos se bloquean por ID ascendente para evitar sobreventa; devolución y cambios también bloquean las filas implicadas. Actualizaciones de catálogo usan los mismos bloqueos. Se utiliza la espera normal de bloqueo de la base de datos.
 - El nombre de categoría se normaliza sin espacios y en minúsculas en el servicio. nombre_normalizado es una columna adicional permitida por el enunciado y tiene unicidad física como protección concurrente; no hay triggers.
@@ -138,4 +133,4 @@ prod usa ddl-auto=validate: el esquema debe existir previamente y mantenerse med
 
 ## 10. Entrega y trabajo del equipo
 
-Consultar docs/GUIA_PASO_A_PASO.md, docs/DEFENSA_TECNICA.md, docs/TRAZABILIDAD.md y docs/EVIDENCIAS.md. El historial colaborativo, las revisiones de compañeros, las ramas individuales durante el examen y las capturas Oracle deben proceder de actividad real del equipo. Este proyecto no crea evidencias ficticias de esas actividades.
+El historial colaborativo, las revisiones de compañeros, las ramas individuales durante el examen y las capturas Oracle deben proceder de actividad real del equipo. Este proyecto no crea evidencias ficticias de esas actividades.

@@ -34,7 +34,4 @@ public class ClienteController {
     @DeleteMapping("/{id}") @Operation(summary="Eliminar sin referencias asociadas")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) { service.delete(id); return ResponseEntity.noContent().build(); }
 
-    private final AlquilerService alquileres;
-    @GetMapping("/{id}/alquileres") @Operation(summary="SC-A: alquileres del cliente por fecha de inicio descendente")
-    public ResponseEntity<List<AlquilerResponseDTO>> alquileres(@PathVariable Long id,@RequestParam(required=false) pe.edu.upeu.AlquileresBackend.enums.EstadoAlquiler estado) { return ResponseEntity.ok(alquileres.porCliente(id,estado)); }
 }

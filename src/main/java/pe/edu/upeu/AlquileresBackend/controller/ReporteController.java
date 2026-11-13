@@ -24,6 +24,4 @@ public class ReporteController {
     private final ReporteService service;
     @GetMapping("/equipos-alquilados") @Operation(summary="Unidades e importe bruto por equipo según mes de registro (AAAA-MM)")
     public ResponseEntity<List<EquipoAlquiladoDTO>> equipos(@RequestParam String periodo,@RequestParam(required=false) Long categoriaId) { return ResponseEntity.ok(service.equiposAlquilados(periodo,categoriaId)); }
-    @GetMapping("/ingresos-por-categoria") @Operation(summary="SC-C: alquileres distintos, unidades e importe bruto por categoría")
-    public ResponseEntity<List<IngresoCategoriaDTO>> categorias(@RequestParam String periodo) { return ResponseEntity.ok(service.ingresosPorCategoria(periodo)); }
 }
