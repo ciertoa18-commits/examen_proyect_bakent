@@ -1,0 +1,1048 @@
+{
+  "info": {
+    "name": "EquipAndes - Anexo B y SC-A a SC-D",
+    "description": "Ejecutar carpeta Anexo B sobre esquema recién sembrado. El caso 503 se ejecuta aparte, con Oracle detenido. Los IDs se resuelven por código. Las fechas se calculan con America/Lima.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "fechaInicio",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ayer",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "periodo",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "alquilerPrincipal",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "alquilerSemanal",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const now=new Date(); const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now); const get=t=>parts.find(p=>p.type===t).value; const today=get('year')+'-'+get('month')+'-'+get('day'); const f=new Date(today+'T12:00:00Z'); f.setUTCDate(f.getUTCDate()+7);pm.collectionVariables.set('fechaInicio',f.toISOString().slice(0,10));const a=new Date(today+'T12:00:00Z');a.setUTCDate(a.getUTCDate()-1);pm.collectionVariables.set('ayer',a.toISOString().slice(0,10));pm.collectionVariables.set('periodo',today.slice(0,7));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Anexo B - ejecutar completo en orden",
+      "item": [
+        {
+          "name": "00 - Preparar fechas y resolver IDs de equipos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "const datos=pm.response.json();for(const e of datos)pm.collectionVariables.set(e.codigo,e.id);",
+                  "pm.test('12 equipos semilla',()=>pm.expect(datos.length).to.eql(12));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00 - Resolver IDs de clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clientes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "for(const c of pm.response.json())pm.collectionVariables.set(c.codigo,c.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00 - Resolver ID de Proyección",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/categorias"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "for(const c of pm.response.json()){if(c.nombre==='Proyección')pm.collectionVariables.set('categoriaProyeccion',c.id);if(c.nombre==='Sonido')pm.collectionVariables.set('categoriaSonido',c.id);}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP01 - Conexión real de base de datos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('database UP',()=>pm.expect(pm.response.json().database).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP02 - Nombre duplicado con espacios y minúsculas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/categorias",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \" sonido \",\n  \"descripcion\": \"Duplicada\",\n  \"estado\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP03 - Cuatro errores de validación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/equipos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"X\",\n  \"nombre\": \"a\",\n  \"tarifaDiaria\": 0,\n  \"unidadesDisponibles\": -1,\n  \"estado\": true,\n  \"categoriaId\": \"{{categoriaSonido}}\",\n  \"condicion\": \"BUENO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400',()=>pm.response.to.have.status(400));",
+                  "pm.test('Cuatro campos',()=>{const e=pm.response.json().validationErrors;['codigo','nombre','tarifaDiaria','unidadesDisponibles'].forEach(k=>pm.expect(e).to.have.property(k));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP04 - Categoría inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/equipos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"EQP-099\",\n  \"nombre\": \"Equipo válido\",\n  \"tarifaDiaria\": 10,\n  \"unidadesDisponibles\": 1,\n  \"estado\": true,\n  \"categoriaId\": 999999,\n  \"condicion\": \"BUENO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP05 - Filtros y orden",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/buscar?categoriaId={{categoriaProyeccion}}&disponible=true&orden=tarifa&dir=asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('EQP-005 y EQP-006',()=>pm.expect(pm.response.json().map(e=>e.codigo)).to.eql(['EQP-005','EQP-006']));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP06 - Alquiler principal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-001}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 3,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-001}}\",\n      \"cantidad\": 4\n    },\n    {\n      \"equipoId\": \"{{EQP-003}}\",\n      \"cantidad\": 6\n    },\n    {\n      \"equipoId\": \"{{EQP-009}}\",\n      \"cantidad\": 8\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+                  "const a=pm.response.json();pm.collectionVariables.set('alquilerPrincipal',a.id);",
+                  "pm.test('18 unidades y 2190.00',()=>{pm.expect(a.totalUnidades).to.eql(18);pm.expect(a.subtotal).to.eql(2190);pm.expect(a.descuento).to.eql(0);pm.expect(a.montoTotal).to.eql(2190);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP06 - Stock EQP-001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-001}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Stock 6',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(6));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP06 - Stock EQP-003",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-003}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Stock 14',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(14));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP06 - Stock EQP-009",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-009}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Stock 8',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(8));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP07 - Cliente inactivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-004}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 1,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-001}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP08 - Rollback por segunda línea sin stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-002}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 2,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-007}}\",\n      \"cantidad\": 2\n    },\n    {\n      \"equipoId\": \"{{EQP-004}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP08 - Stock intacto tras rollback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-007}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('8 unidades',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(8));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP08 - No existe cabecera parcial",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/alquileres"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Solo alquiler principal',()=>pm.expect(pm.response.json().length).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP09 - Inicio anterior a hoy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-003}}\",\n  \"fechaInicio\": \"{{ayer}}\",\n  \"dias\": 1,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-001}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP10 - Descuento semanal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-002}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 7,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-002}}\",\n      \"cantidad\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+                  "const a=pm.response.json();pm.collectionVariables.set('alquilerSemanal',a.id);pm.test('1680 - 252 = 1428',()=>{pm.expect(a.subtotal).to.eql(1680);pm.expect(a.descuento).to.eql(252);pm.expect(a.montoTotal).to.eql(1428);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP10 - Stock de consola",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-002}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('2 disponibles',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP11 - Segundo alquiler vigente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-001}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 1,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-005}}\",\n      \"cantidad\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+                  "pm.test('Total 80',()=>pm.expect(pm.response.json().montoTotal).to.eql(80));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP12 - Tercer alquiler rechazado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-001}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 1,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-006}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP12 - Stock intacto de pantalla",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-006}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('3 disponibles',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP13 - Equipo repetido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-003}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 2,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-007}}\",\n      \"cantidad\": 1\n    },\n    {\n      \"equipoId\": \"{{EQP-007}}\",\n      \"cantidad\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP14 - Reporte agregado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/reportes/equipos-alquilados?periodo={{periodo}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Unidades e importes brutos exactos',()=>{const d=pm.response.json();pm.expect(d.map(e=>e.codigo)).to.eql(['EQP-009','EQP-003','EQP-001','EQP-002','EQP-005']);pm.expect(d.map(e=>e.unidadesAlquiladas)).to.eql([8,6,4,2,2]);pm.expect(d.map(e=>e.importeBruto)).to.eql([600,630,960,1680,80]);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP15 - Devolver una vez",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/alquileres/{{alquilerPrincipal}}/devolver"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Devuelto con fecha',()=>{const a=pm.response.json();pm.expect(a.estado).to.eql('DEVUELTO');pm.expect(a.fechaDevolucion).to.be.a('string');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP15 - Segunda devolución rechazada",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/alquileres/{{alquilerPrincipal}}/devolver"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP15 - Reposición EQP-001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-001}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Stock 10',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP15 - Reposición EQP-003",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-003}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Stock 20',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(20));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP15 - Reposición EQP-009",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/{{EQP-009}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Stock 16',()=>pm.expect(pm.response.json().unidadesDisponibles).to.eql(16));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP16 - Preflight permitido",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:4200"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "POST"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Content-Type"
+              }
+            ],
+            "url": "{{baseUrl}}/equipos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Origen permitido',()=>pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql('http://localhost:4200'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CP16 - Preflight rechazado",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:3000"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "POST"
+              }
+            ],
+            "url": "{{baseUrl}}/equipos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403',()=>pm.response.to.have.status(403));",
+                  "pm.test('Sin permiso CORS',()=>pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Parte II - cambios adicionales (después del Anexo B)",
+      "item": [
+        {
+          "name": "SC-A - Alquileres vigentes del cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clientes/{{CLI-001}}/alquileres?estado=VIGENTE"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Un alquiler vigente',()=>pm.expect(pm.response.json().length).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SC-A - Cliente inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clientes/999999/alquileres"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404',()=>pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SC-B - Crear alquiler con dos equipos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alquileres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{CLI-003}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"dias\": 7,\n  \"lugarEvento\": \"Centro de convenciones Cerro Juli\",\n  \"detalles\": [\n    {\n      \"equipoId\": \"{{EQP-001}}\",\n      \"cantidad\": 1\n    },\n    {\n      \"equipoId\": \"{{EQP-003}}\",\n      \"cantidad\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201',()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('alquilerSC',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SC-B - Retirar micrófono y recalcular",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/alquileres/{{alquilerSC}}/equipos/{{EQP-003}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Totales actualizados',()=>{const a=pm.response.json();pm.expect(a.subtotal).to.eql(560);pm.expect(a.descuento).to.eql(84);pm.expect(a.montoTotal).to.eql(476);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SC-B - No dejar vacío",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/alquileres/{{alquilerSC}}/equipos/{{EQP-001}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409',()=>pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SC-C - Ingresos por categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/reportes/ingresos-por-categoria?periodo={{periodo}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SC-C - Periodo sin datos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/reportes/ingresos-por-categoria?periodo=2000-01"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Lista vacía',()=>pm.expect(pm.response.json()).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SC-D - Condición como filtro",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/equipos/buscar?condicion=NUEVO&nombre=pantalla"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.response.to.have.status(200));",
+                  "pm.test('Pantalla nueva',()=>pm.expect(pm.response.json()[0].codigo).to.eql('EQP-006'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Manual - indisponibilidad Oracle",
+      "item": [
+        {
+          "name": "Health 503 - ejecutar manualmente con Oracle detenido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 503',()=>pm.response.to.have.status(503));",
+                  "pm.test('database DOWN',()=>pm.expect(pm.response.json().database).to.eql('DOWN'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
